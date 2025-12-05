@@ -167,10 +167,11 @@ auto extractParameters(std::string pstr) {
 }
 
 /**
- * @brief Find all public function definitions in one class body.
+ * @brief Find all PUBLIC function definitions in one class body.
  * @param source The source of one class body, starts with '{', ends with '}'.
  */
 auto findFunctionDefinitions(std::string &source) {
+    bool pub = false;
     std::vector<Function> funcs; 
     int balance = 0;
     for(std::size_t i=0;i<source.size();i++) {
@@ -180,6 +181,15 @@ auto findFunctionDefinitions(std::string &source) {
         } else if(source[i]=='}') {
             balance --;
         }
+
+        if(i>0 && std::isspace(source[i-1]) && i+6<source.size() && source.substr(i,7) == "public:") {
+            pub = true;
+        } else if(i>0 && std::isspace(source[i-1]) && i+7<source.size() && source.substr(i,8) == "private:") {
+            pub = false;
+        }
+
+        if(!pub)
+            continue;
         
         if(balance == 2 && prev == 1) {
             // Function body starts
@@ -256,16 +266,37 @@ void processSourceCpp(std::string &source, std::string o_path) {
     auto solutionKlass = klasses[si];
     auto solutionKlassBody = newSource.substr(solutionKlass.st, solutionKlass.ct);
 
-    std::cout << "Solution class:" << std::endl;
-    std::cout << solutionKlassBody << std::endl;
-
     auto funcs = findFunctionDefinitions(solutionKlassBody);
-    std::cout << "Funcs:" << std::endl;
-    for(auto func:funcs) {
-        std::cout << func.ret_type << " " << func.name << std::endl;
-        for(auto param:func.params) {
-            std::cout << param.type << " " << param.name << "; ";
-        }
-        std::cout << std::endl;
+
+    // std::cout << "Funcs:" << std::endl;
+    // for(auto func:funcs) {
+    //     std::cout << func.ret_type << " " << func.name << std::endl;
+    //     for(auto param:func.params) {
+    //         std::cout << param.type << " " << param.name << "; ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    if(funcs.size()==0) {
+        throw std::runtime_error("Cannot find any public function in the Solution class.");
     }
+    Function func;
+    if(funcs.size() == 1)
+        func = funcs[0];
+    else {
+        std::vector<std::string> stred_funcs(funcs.size());
+        for(int i=0;i<funcs.size();i++) {
+            stred_funcs[i] = funcs[i].ret_type + ' ' + funcs[i].name + '(';
+            for(int j=0;j<funcs[i].params.size();j++) {
+                stred_funcs[i] += funcs[i].params[j].type + ' ' + funcs[i].params[j].name;
+                if(j!=funcs[i].params.size()-1)
+                    stred_funcs[i]+=", ";
+            }
+            stred_funcs[i]+=");";
+        }
+        int ans = selection("Witch function is the entry function?", stred_funcs);
+        func = funcs[ans];
+    }
+
+    std::cout << func.name << std::endl;
 }

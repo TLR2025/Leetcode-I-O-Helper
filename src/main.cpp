@@ -10,6 +10,7 @@
 #include "process/cpp.hpp"
 #include "CLI11.hpp"
 #include "json.hpp"
+#include "utils/selection.hpp"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
