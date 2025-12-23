@@ -1,4 +1,4 @@
-// Copyright © 2023 Donatas Mockus
+// Copyright © 2023-2024 Donatas Mockus
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 // documentation files (the “Software”), to deal in the Software without restriction, including without limitation 
@@ -45,7 +45,7 @@ static int const keySx = 68;
 static int const keyDx = 67;
 static int const keyEnter = 13;
 #endif
-static int const keyBackspace = 127;
+static int const keyBackspace = 127; // TODO: is this also correct on Windows and other platforms?
 
 class Inquirer;
 
@@ -321,13 +321,13 @@ private:
 		return (*p == 0);
 	}
 
-	static unsigned wrap_int(unsigned int k, const unsigned lowerBound, const unsigned upperBound)
+	static int wrap_int(int k, const int lowerBound, const int upperBound)
 	{
-		const unsigned range_size = upperBound - lowerBound + 1;
-
+		const int range_size = upperBound - lowerBound + 1;
+		
 		if (k < lowerBound)
 			k += range_size * ((lowerBound - k) / range_size + 1);
-
+		
 		return lowerBound + (k - lowerBound) % range_size;
 	}
 

@@ -31,6 +31,7 @@ vector<vector<string>>
 #include <iostream>
 #include <utility>
 #include <cctype>
+#include <array>
 #include "process/cpp.hpp"
 #include "utils/str_utils.hpp"
 #include "utils/selection.hpp"
@@ -46,6 +47,30 @@ struct Function {
     std::string ret_type;
 };
 
+
+const std::array<std::string, 5> zeroDimension = {
+    "char",
+    "double",
+    "int",
+    "long long",
+    "string",
+};
+
+const std::array<std::string, 6> oneDimension = {
+    "vector<bool>",
+    "vector<char>",
+    "vector<double>",
+    "vector<int>",
+    "vector<long long>",
+    "vector<string>",
+};
+
+const std::array<std::string, 4> twoDimension = {
+    "vector<vector<char>>",
+    "vector<vector<int>>",
+    "vector<vector<long long>>",
+    "vector<vector<string>>"
+};
 
 /**
  * @brief Remove all comment codes and string and character literals of the source.
@@ -160,7 +185,11 @@ auto extractParameters(std::string pstr) {
         while(tvs[i]!='>' && !std::isalnum(tvs[i]) && tvs[i]!='_' && tvs[i]!='&' && tvs[i]!='*') {
             i--;
         }
-        var.type = removeSpace(tvs.substr(0, i+1));
+        bool flag = (tvs.substr(0,5) == "const");
+        if(flag)
+            var.type = "const " + removeSpace(tvs.substr(5, i-4));
+        else
+            var.type = removeSpace(tvs.substr(0, i+1));
         params.push_back(var);
     }
     return params;
@@ -245,6 +274,38 @@ auto findFunctionDefinitions(std::string &source) {
     return funcs;
 };
 
+std::string generateMainFunction(Function &func) {
+    std::string src = "";
+    src.append("int main(int argc, char* argv[]) {\n");
+    src.append("\tSolution solution;\n"); // src current size: 55
+    for(std::size_t i=0;i<func.params.size();i++) {
+        std::string tp = func.params[0].type;
+        while(tp.find('&')!=std::string::npos)
+            tp.erase(tp.find('&'));
+        src.append("\t" + tp + " " + func.params[i].name + ";\n");
+    }
+    bool has_1d = false;
+    bool has_2d = false;
+    for(std::size_t i=0;i<func.params.size();i++) {
+        std::string tp = func.params[i].type;
+        std::string nm = func.params[i].name;
+        if(std::find(zeroDimension.begin(), zeroDimension.end(), tp)) {
+            src.append("\tstd::cout << \"" + nm + ": \";\n");
+            src.append("\tstd::cin >> " + nm + ";\n");
+            if(tp == "string") {
+                src.append("\t" + nm + " = " + nm + ".substr(" + nm + ".find('\"') + 1, " + nm + ".rfind('\"') - " + nm + ".find('\"') - 1);\n");
+            }
+        } else if(std::find(oneDimension.begin(), oneDimension.end(), tp)) {
+            has_1d = true;
+            src.append("\tstd::string " + nm + "_str;");
+            src.append("\tstd::cout << \"" + nm + ": \";\n");
+            src.append("\tstd::getline(std::cin, " + nm + "_str);\n");
+        }
+    }
+    src.append("\treturn 0;\n}");
+    return src;
+}
+
 void processSourceCpp(std::string &source, std::string o_path) {
     // Remove the comments and string and character literals
     std::string newSource = removeCommentsAndStrs(source);
@@ -298,5 +359,7 @@ void processSourceCpp(std::string &source, std::string o_path) {
         func = funcs[ans];
     }
 
-    std::cout << func.name << std::endl;
+    std::cout << "Generating IO code for function \"" << func.name << "\" ..." << std::endl;
+
+    std::cout << generateMainFunction(func) << std::endl;
 }

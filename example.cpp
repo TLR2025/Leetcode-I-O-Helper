@@ -182,18 +182,6 @@ public:
 		return cnt - repeatCnt;
 	}
 };
-int main() {
-	Solution solution;
-	int n;
-	cin>>n;
-	vector<vector<int>> points(n, vector<int>(2));
-	for(int i=0;i<points.size();i++) {
-		cin>>points[i][0]>>points[i][1];
-	}
-	cout<<solution.countTrapezoids(points);
-	return 0;
-}
-
 /*
 5
 -3 2
