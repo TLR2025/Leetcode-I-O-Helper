@@ -32,6 +32,8 @@ vector<vector<string>>
 #include <utility>
 #include <cctype>
 #include <array>
+#include <format>
+#include <unordered_set>
 #include "process/cpp.hpp"
 #include "utils/str_utils.hpp"
 #include "utils/selection.hpp"
@@ -274,35 +276,142 @@ auto findFunctionDefinitions(std::string &source) {
     return funcs;
 };
 
-std::string generateMainFunction(Function &func) {
-    std::string src = "";
-    src.append("int main(int argc, char* argv[]) {\n");
-    src.append("\tSolution solution;\n"); // src current size: 55
-    for(std::size_t i=0;i<func.params.size();i++) {
-        std::string tp = func.params[0].type;
-        while(tp.find('&')!=std::string::npos)
-            tp.erase(tp.find('&'));
-        src.append("\t" + tp + " " + func.params[i].name + ";\n");
+/**
+ * Given an 1d type, return its input code (that will be a lambda function). 
+ */
+auto generate1DInput(const std::string& type) {
+    std::string rel_tp = type.substr(7, type.rfind('>') - 7);
+    if(type == "vector<bool>") {
+        return std::string("\t") + 
+R"(auto input_1d_bool_ = [&](const string &str) {
+		vector<bool> result;
+		int st = str.find('[');
+		int ed = str.rfind(']');
+		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
+		for(auto &it:res_str) {
+			result.push_back(it.find("true")!=string::npos);
+		}
+		return result;
+	};
+)";
+    } else if(type == "vector<string>") {
+        return (
+R"(auto input_1d_string_ = [&](const string &str) {
+		vector<string> result;
+		int st = str.find('[');
+		int ed = str.rfind(']');
+		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
+		for(auto &it:res_str) {
+			result.push_back(it.substr(it.find('\"') + 1, it.rfind('\"') - it.find('\"') - 1));
+		}
+		return result;
+	};
+)");
+    } else if(type == "vector<char>") {
+        return (
+R"(auto input_1d_char_ = [&](const string &str) {
+		vector<char> result;
+		int st = str.find('[');
+		int ed = str.rfind(']');
+		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
+		for(auto &it:res_str) {
+			result.push_back(it.substr(it.find('\"') + 1, it.rfind('\"') - it.find('\"') - 1)[0]);
+		}
+		return result;
+	};
+)");
+    } else {
+        std::string convertFunction;
+        if(rel_tp == "int") {
+            convertFunction = "stoi";
+        } else if(rel_tp == "long long") {
+            convertFunction = "stoll";
+        } else if(rel_tp == "double") {
+            convertFunction = "stold";
+        } else {
+            throw std::runtime_error("Unsupported type: \"" + type + "\".");
+        }
+        return ("\t" + std::format(
+R"(auto input_1d_{}_ = [&](const string &str) {
+		vector<{}> result;
+		int st = str.find('[');
+		int ed = str.rfind(']');
+		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
+		for(auto &it:res_str) {
+			result.push_back({}(it));
+		}
+		return result;
+	};
+)",     rel_tp, rel_tp, convertFunction));
     }
-    bool has_1d = false;
-    bool has_2d = false;
-    for(std::size_t i=0;i<func.params.size();i++) {
+}
+
+// Reimplement using std::format
+/**
+ * Given an entry function signature, return its corresponding main function.
+ */
+std::string generateMainFunction(Function &func) {
+    std::string src;
+    src = std::format("int main(int argc, char* argv[]) {{\n\tSolution solution;\n");
+
+    for (std::size_t i = 0; i < func.params.size(); i++) {
+        std::string tp = func.params[i].type;
+        // Delete &
+        tp.erase(std::remove(tp.begin(), tp.end(), '&'), tp.end());
+        src += std::format("\t{} {};\n", tp, func.params[i].name);
+    }
+    
+    // All 1d types
+    std::unordered_set<std::string> _1d;
+    // All 2d types
+    std::unordered_set<std::string> _2d;
+    for (std::size_t i = 0; i < func.params.size(); i++) {
         std::string tp = func.params[i].type;
         std::string nm = func.params[i].name;
-        if(std::find(zeroDimension.begin(), zeroDimension.end(), tp)) {
-            src.append("\tstd::cout << \"" + nm + ": \";\n");
-            src.append("\tstd::cin >> " + nm + ";\n");
-            if(tp == "string") {
-                src.append("\t" + nm + " = " + nm + ".substr(" + nm + ".find('\"') + 1, " + nm + ".rfind('\"') - " + nm + ".find('\"') - 1);\n");
+
+        src += std::format("\tstd::cout << \"{}: \";\n", nm);
+
+        if (std::find(zeroDimension.begin(), zeroDimension.end(), tp) != zeroDimension.end()) {
+            if (tp == "string") {
+                src += std::format("\tgetline(cin, {});\n", nm);
+                src += std::format(
+                    "\t{} = {}.substr({}.find('\"') + 1, {}.rfind('\"') - {}.find('\"') - 1);\n",
+                    nm, nm, nm, nm, nm
+                );
+            } else if (tp == "char") {
+                src += std::format("\tstring {}_str;\n", nm);
+                src += std::format("\tcin >> {}_str;\n", nm);
+                src += std::format(
+                    "\t{} = {}_str.substr({}_str.find('\"') + 1, {}_str.rfind('\"') - {}_str.find('\"') - 1)[0];\n",
+                    nm, nm, nm, nm, nm
+                );
+            } else {
+                src += std::format("\tstd::cin >> {};\n", nm);
             }
-        } else if(std::find(oneDimension.begin(), oneDimension.end(), tp)) {
-            has_1d = true;
-            src.append("\tstd::string " + nm + "_str;");
-            src.append("\tstd::cout << \"" + nm + ": \";\n");
-            src.append("\tstd::getline(std::cin, " + nm + "_str);\n");
+        } else if (std::find(oneDimension.begin(), oneDimension.end(), tp) != oneDimension.end()) {
+            _1d.insert(tp);
+            src += std::format("\tstd::string {}_str;\n", nm);
+            src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
+            src += std::format("\t{} = {}({}_str);\n", nm,
+                 std::format("input_1d_{}_",
+                     tp.substr(tp.find('<') + 1, tp.find('>') - tp.find('<') - 1)
+                ),
+            nm);
+        } else if (std::find(twoDimension.begin(), twoDimension.end(), tp) != twoDimension.end()) {
+            _2d.insert(tp);
+            src += std::format("\tstd::string {}_str;\n", nm);
+            src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
+            src += std::format("\t{} = {}({}_str);\n", nm,
+                 std::format("input_2d_{}_",
+                     tp.substr(tp.rfind('<') + 1, tp.find('>') - tp.rfind('<') - 1)
+                ),
+            nm);
+        } else {
+            throw std::runtime_error("Unsupported type: \"" + tp + "\".");
         }
     }
-    src.append("\treturn 0;\n}");
+
+    src += "\treturn 0;\n}";
     return src;
 }
 

@@ -3,7 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <fstream>
-#include <set>
+#include <unordered_set>
 #include <vector>
 #include "utils/file_io.hpp"
 #include "process/process.hpp"
@@ -15,7 +15,7 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-std::set<std::string> langs = {"cpp","java","py","py3","c","cs","js","ts","php","swift","kt","dart","go","rb","scala","rs","rkt","erl","ex"};
+std::unordered_set<std::string> langs = {"cpp","java","py","py3","c","cs","js","ts","php","swift","kt","dart","go","rb","scala","rs","rkt","erl","ex"};
 
 int main(int argc, char* argv[]) {
 
