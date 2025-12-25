@@ -295,7 +295,7 @@ R"(auto input_1d_bool_ = [&](const string &str) {
 	};
 )";
     } else if(type == "vector<string>") {
-        return (
+        return std::string(
 R"(auto input_1d_string_ = [&](const string &str) {
 		vector<string> result;
 		int st = str.find('[');
@@ -308,7 +308,7 @@ R"(auto input_1d_string_ = [&](const string &str) {
 	};
 )");
     } else if(type == "vector<char>") {
-        return (
+        return std::string(
 R"(auto input_1d_char_ = [&](const string &str) {
 		vector<char> result;
 		int st = str.find('[');
@@ -332,16 +332,16 @@ R"(auto input_1d_char_ = [&](const string &str) {
             throw std::runtime_error("Unsupported type: \"" + type + "\".");
         }
         return ("\t" + std::format(
-R"(auto input_1d_{}_ = [&](const string &str) {
+R"(auto input_1d_{}_ = [&](const string &str) {{
 		vector<{}> result;
 		int st = str.find('[');
 		int ed = str.rfind(']');
 		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
-		for(auto &it:res_str) {
+		for(auto &it:res_str) {{
 			result.push_back({}(it));
-		}
+		}}
 		return result;
-	};
+    }};
 )",     rel_tp, rel_tp, convertFunction));
     }
 }
