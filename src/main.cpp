@@ -15,46 +15,18 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-std::unordered_set<std::string> langs = {"cpp","java","py","py3","c","cs","js","ts","php","swift","kt","dart","go","rb","scala","rs","rkt","erl","ex"};
+std::unordered_set<std::string> langs = {"cpp"};
+std::string APP_VERSION = "1.0.0";
 
 int main(int argc, char* argv[]) {
-
-    // std::ifstream file(getExecutableDir() / "assets" / "starter_codes.json");
-    // json data = json::parse(file);
-    // auto q = data.at("questions").get<std::vector<json>>();
-    // std::set<std::string> tps;
-    // int cnt = 0;
-    // for(auto p: q) {
-    //     // std::cerr << "id: " << p.at("problem_id").get<std::string>() << std::endl;
-    //     try {
-    //         auto source = p.at("code_snippets").at("cpp").get<std::string>();
-    //         try {
-    //             std::vector<std::string> tpsa = processSourceCpp(source, "");
-                
-    //             for(auto x:tpsa) {
-    //                 tps.insert(x);
-    //             }
-    //         } catch(std::runtime_error e) {
-    //             std::cerr << cnt++ << p.at("problem_id").get<std::string>() + ": " << e.what() << std::endl;
-    //         }
-    //     } catch(...) {
-    //         std::cerr << cnt++ << "Fatal error: " << p.at("problem_id").get<std::string>() << std::endl;
-    //     }
-    // }
-    // for(auto x:tps) {
-    //     std::cerr << x << std::endl;
-    // }
-    // return 0;
-
-    CLI::App app{"LeetCode I-O helper"};
+    CLI::App app{"A tool that can automatically generate the main function based on a LeetCode's Solution class.", "LeetCode I/O helper"};
     argv = app.ensure_utf8(argv);
     std::string src_path = "", o_path = "", lang = "";
-    int id = 0;
 
     app.add_option("-s,--source", src_path, "The path of the source file.")->required()->type_name("FILEPATH");
-    app.add_option("-o,--output", o_path, "The path of the output file (original file as default).")->type_name("FILEPATH");
-    app.add_option("-l,--lang", lang, "The language of the source (automatic inference as default).")->type_name("LANGUAGE");
-    app.add_option("-i,--id", id, "The id of the problem (optional).")->type_name("NUMBER")->check(CLI::PositiveNumber);
+    app.add_option("-o,--output", o_path, "The path of the output file (default: original file).")->type_name("FILEPATH");
+    app.add_option("-l,--lang", lang, "The language of the source (default: automatic inference).")->type_name("LANGUAGE");
+    app.set_version_flag("-v,--version", APP_VERSION);
 
     if(argc<=1) {
         std::cout << app.help() << std::endl;
@@ -63,8 +35,14 @@ int main(int argc, char* argv[]) {
 
     try {
         app.parse(argc, argv);
-    } catch(const CLI::ParseError &e) {
-        std::cerr << "[ERROR] "; 
+    } catch (const CLI::CallForHelp &e) {
+        std::cout << e.what() << std::endl;
+        return 0;
+    } catch (const CLI::CallForVersion &e) {
+        std::cout << e.what() << std::endl;
+        return 0;
+    } catch (const CLI::ParseError &e) {
+        std::cerr << "[ERROR] " << e.what() << std::endl;
         return app.exit(e);
     }
     
@@ -113,7 +91,7 @@ int main(int argc, char* argv[]) {
         for(int i=0;i<lang.size();i++)
             lang[i] = tolower(lang[i]);
         if(langs.find(lang) == langs.end()) {
-            std::cerr << "[ERROR] Unknow language: \"" << lang << "\", allowed values: " << std::endl;
+            std::cerr << "[ERROR] Unsupported language: \"" << lang << "\", allowed values: " << std::endl;
             for(auto x:langs) {
                 std::cerr << x << " ";
             }
@@ -123,7 +101,7 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        processSource(source, lang, o_path, id);
+        processSource(source, lang, o_path);
     } catch(std::runtime_error e) {
         std::cerr << "[ERROR] " << e.what() << std::endl;
     }

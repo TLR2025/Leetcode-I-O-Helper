@@ -1,4 +1,4 @@
 #pragma once
 #include <string>
 #include <vector>
-void processSourceCpp(std::string &source, std::string o_path);
+void processSourceCpp(const std::string &source, const std::string &o_path);

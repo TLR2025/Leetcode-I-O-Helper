@@ -1,28 +1,13 @@
 /*
-CustomFunction
+NOT SUPPORTED TYPES:
 ListNode
 Master
 MountainArray
 Node
 TreeNode
-char
-double
-int
-long long
-string
 vector<Employee*>
 vector<ListNode*>
 vector<TreeNode*>
-vector<bool>
-vector<char>
-vector<double>
-vector<int>
-vector<long long>
-vector<string>
-vector<vector<char>>
-vector<vector<int>>
-vector<vector<long long>>
-vector<vector<string>>
 */
 
 #include <vector>
@@ -34,9 +19,14 @@ vector<vector<string>>
 #include <array>
 #include <format>
 #include <unordered_set>
+#include <utility>
+#include <optional>
+#include <fstream>
+#include <filesystem>
 #include "process/cpp.hpp"
 #include "utils/str_utils.hpp"
 #include "utils/selection.hpp"
+#include "utils/file_io.hpp"
 
 struct Var {
     std::string name;
@@ -67,24 +57,27 @@ const std::array<std::string, 6> oneDimension = {
     "vector<string>",
 };
 
-const std::array<std::string, 4> twoDimension = {
+const std::array<std::string, 6> twoDimension = {
     "vector<vector<char>>",
     "vector<vector<int>>",
     "vector<vector<long long>>",
-    "vector<vector<string>>"
+    "vector<vector<string>>",
+    "vector<vector<bool>>",
+    "vector<vector<double>>"
 };
 
 /**
  * @brief Remove all comment codes and string and character literals of the source.
- * @return The new source code will be returned.
+ * @return A pair that contains the new source code and the mapping array.
  * @param source The original source string.
  */
-std::string removeCommentsAndStrs(std::string &source) {
+std::pair<std::string, std::vector<std::size_t>> removeCommentsAndStrs(const std::string &source) {
     std::string rst;
+    std::vector<std::size_t> mapping;
     bool inBlockComment = false;
     bool inString = false;
     bool inCharacter = false;
-    for(int i=0;i<source.size();i++) {
+    for(std::size_t i=0;i<source.size();i++) {
         if(inBlockComment) {
             // Detect the end of the block comment
             if(i+1!=source.size() && source[i]=='*' && source[i+1]=='/') {
@@ -121,9 +114,10 @@ std::string removeCommentsAndStrs(std::string &source) {
         } else {
             // Normal case
             rst.push_back(source[i]);
+            mapping.push_back(i);
         }
     }
-    return rst;
+    return {rst, mapping};
 };
 
 /**
@@ -131,7 +125,7 @@ std::string removeCommentsAndStrs(std::string &source) {
  * @param source The source with comments and string and character literals removed.
  * @return An array of {name, st, ct}, among them, name is the name of the class, st and ct describe the interval of the part between { and }.
  */
-auto findKlassDefinitions(std::string &source) {
+auto findKlassDefinitions(const std::string &source) {
     struct Klass {
         std::string name;
         std::size_t st, ct;
@@ -173,7 +167,7 @@ auto findKlassDefinitions(std::string &source) {
  * @brief Based on a definition (string) of the list of parameters of a function, return the list.
  * @param pstr The string of the definition of the parameters, between "()", included.
  */
-auto extractParameters(std::string pstr) {
+auto extractParameters(const std::string& pstr) {
     std::vector<Var> params;
     auto variableStrs = split(pstr.substr(1,pstr.size()-2), ',');
     for(auto vs: variableStrs) {
@@ -198,10 +192,10 @@ auto extractParameters(std::string pstr) {
 }
 
 /**
- * @brief Find all PUBLIC function definitions in one class body.
+ * @brief Find all public function definitions in one class body.
  * @param source The source of one class body, starts with '{', ends with '}'.
  */
-auto findFunctionDefinitions(std::string &source) {
+auto findFunctionDefinitions(const std::string &source) {
     bool pub = false;
     std::vector<Function> funcs; 
     int balance = 0;
@@ -277,49 +271,54 @@ auto findFunctionDefinitions(std::string &source) {
 };
 
 /**
+ * Inserts the given headers (directly to the source variable) if there are not included.
+ */
+auto insertHeadersIfNotIncluded(std::string &source, const std::vector<std::string> &headers) {
+    std::unordered_set<std::string> includedHeaders;
+    std::size_t loc = source.find("#include");
+    while(loc!=std::string::npos) {
+        std::string h = source.substr(loc+8, source.find('\n', loc) - loc - 8);
+
+        if(h.find('<')!=std::string::npos && h.find('>')!=std::string::npos) {
+            h = h.substr(h.find('<')+1, h.find('>')-h.find('<')-1);
+        } else if(h.find('"')!=std::string::npos && h.find('"')!=h.rfind('"')) {
+            h = h.substr(h.find('"')+1, h.rfind('"')-h.find('"')-1);
+        } else {
+            throw std::runtime_error("An error occurred while parsing the header file.");
+        }
+        h = trim(h);
+        includedHeaders.insert(h);
+        loc = source.find("#include", loc+1);
+    }
+    if(includedHeaders.count("bits/stdc++.h")) {
+        return;
+    }
+    for(auto &header:headers) {
+        if(!includedHeaders.count(header)) {
+            source.insert(0, std::format("#include <{}>\n", header));
+        }
+    }
+
+}
+
+// Compressed code
+/**
  * Given an 1d type, return its input code (that will be a lambda function). 
  */
 auto generate1DInput(const std::string& type) {
     std::string rel_tp = type.substr(7, type.rfind('>') - 7);
     if(type == "vector<bool>") {
         return std::string("\t") + 
-R"(auto input_1d_bool_ = [&](const string &str) {
-		vector<bool> result;
-		int st = str.find('[');
-		int ed = str.rfind(']');
-		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
-		for(auto &it:res_str) {
-			result.push_back(it.find("true")!=string::npos);
-		}
-		return result;
-	};
-)";
+R"(auto input_1d_bool_=[&](const string&str){vector<bool>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.find("true")!=string::npos);}return result;};)"
+        + "\n";
     } else if(type == "vector<string>") {
-        return std::string(
-R"(auto input_1d_string_ = [&](const string &str) {
-		vector<string> result;
-		int st = str.find('[');
-		int ed = str.rfind(']');
-		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
-		for(auto &it:res_str) {
-			result.push_back(it.substr(it.find('\"') + 1, it.rfind('\"') - it.find('\"') - 1));
-		}
-		return result;
-	};
-)");
+        return std::string("\t") + 
+R"(auto input_1d_string_=[&](const string&str){vector<string>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.substr(it.find('\"')+1,it.rfind('\"')-it.find('\"')-1));}return result;};)"
+        + "\n";
     } else if(type == "vector<char>") {
-        return std::string(
-R"(auto input_1d_char_ = [&](const string &str) {
-		vector<char> result;
-		int st = str.find('[');
-		int ed = str.rfind(']');
-		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
-		for(auto &it:res_str) {
-			result.push_back(it.substr(it.find('\"') + 1, it.rfind('\"') - it.find('\"') - 1)[0]);
-		}
-		return result;
-	};
-)");
+        return std::string("\t") + 
+R"(auto input_1d_char_=[&](const string&str){vector<char>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.substr(it.find('\"')+1,it.rfind('\"')-it.find('\"')-1)[0]);}return result;};)"
+        + "\n";
     } else {
         std::string convertFunction;
         if(rel_tp == "int") {
@@ -332,17 +331,42 @@ R"(auto input_1d_char_ = [&](const string &str) {
             throw std::runtime_error("Unsupported type: \"" + type + "\".");
         }
         return ("\t" + std::format(
-R"(auto input_1d_{}_ = [&](const string &str) {{
-		vector<{}> result;
-		int st = str.find('[');
-		int ed = str.rfind(']');
-		vector<string> res_str = split_(str.substr(st + 1, ed - st - 1), ',', false);
-		for(auto &it:res_str) {{
-			result.push_back({}(it));
-		}}
-		return result;
-    }};
-)",     rel_tp, rel_tp, convertFunction));
+R"(auto input_1d_{}_=[&](const string&str){{vector<{}>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {{}};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){{result.push_back({}(it));}}return result;}};)",
+        rel_tp, rel_tp, convertFunction));
+    }
+}
+
+/**
+ * Given an 2d type, return its input code (that will be a lambda function). 
+ */
+auto generate2DInput(const std::string& type) {
+    std::string rel_tp = type.substr(type.rfind('<'), type.find('>'));
+if(type == "vector<vector<bool>>") {
+        return std::string("\t") + 
+R"(auto input_2d_bool_=[&](const string&str){vector<vector<bool>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.find("true")!=string::npos);}i=rpos;}}return result;};)"
+        + "\n";
+    } else if(type == "vector<vector<string>>") {
+        return std::string("\t") + 
+R"(auto input_2d_string_=[&](const string&str){vector<vector<string>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.substr(res_str.find('\"')+1,res_str.rfind('\"')-res_str.find('\"')-1));}i=rpos;}}return result;};)"
+        + "\n";
+    } else if(type == "vector<vector<char>>") {
+        return std::string("\t") + 
+R"(auto input_2d_char_=[&](const string&str){vector<vector<char>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.substr(res_str.find('\"')+1,res_str.rfind('\"')-res_str.find('\"')-1)[0]);}i=rpos;}}return result;};)"
+        + "\n";
+    } else {
+        std::string convertFunction;
+        if(rel_tp == "int") {
+            convertFunction = "stoi";
+        } else if(rel_tp == "long long") {
+            convertFunction = "stoll";
+        } else if(rel_tp == "double") {
+            convertFunction = "stold";
+        } else {
+            throw std::runtime_error("Unsupported type: \"" + type + "\".");
+        }
+        return ("\t" + std::format(
+R"(auto input_2d_{}_=[&](const string&str){{vector<vector<{}>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){{if(str[i]=='['){{auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&num_str:row_data){{result.back().push_back({}(num_str));}}i=rpos;}}}}return result;}};)",
+            rel_tp, rel_tp, convertFunction));
     }
 }
 
@@ -353,20 +377,19 @@ R"(auto input_1d_{}_ = [&](const string &str) {{
 std::string generateMainFunction(Function &func) {
     std::string src;
     src = std::format("int main(int argc, char* argv[]) {{\n\tSolution solution;\n");
-
-    for (std::size_t i = 0; i < func.params.size(); i++) {
-        std::string tp = func.params[i].type;
-        // Delete &
-        tp.erase(std::remove(tp.begin(), tp.end(), '&'), tp.end());
-        src += std::format("\t{} {};\n", tp, func.params[i].name);
-    }
     
+    std::size_t lambdaInsertLoc = src.size();
+
     // All 1d types
     std::unordered_set<std::string> _1d;
     // All 2d types
     std::unordered_set<std::string> _2d;
     for (std::size_t i = 0; i < func.params.size(); i++) {
         std::string tp = func.params[i].type;
+        // Delete &
+        tp.erase(std::remove(tp.begin(), tp.end(), '&'), tp.end());
+        src += std::format("\t{} {};\n", tp, func.params[i].name);
+
         std::string nm = func.params[i].name;
 
         src += std::format("\tstd::cout << \"{}: \";\n", nm);
@@ -409,18 +432,93 @@ std::string generateMainFunction(Function &func) {
         } else {
             throw std::runtime_error("Unsupported type: \"" + tp + "\".");
         }
+        for(auto &tp:_1d) {
+            src.insert(lambdaInsertLoc, generate1DInput(tp));
+        }
+        for(auto &tp:_2d) {
+            src.insert(lambdaInsertLoc, generate2DInput(tp));
+        }
+        if(_1d.size() || _2d.size()) {
+            // split_
+            src.insert(lambdaInsertLoc, 
+                std::string("\t") 
+                + R"(auto split_=[](const std::string&str,char c,bool allowEmpty){std::string t="";std::vector<std::string>result;for(int i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};)"
+                + "\n"
+            );
+        }
     }
 
     src += "\treturn 0;\n}";
     return src;
 }
 
-void processSourceCpp(std::string &source, std::string o_path) {
+/**
+ * Find the location interval of the main function.
+ */
+std::optional<std::pair<std::size_t, std::size_t>> findMainFunction(const std::string& source) {
+    auto iLoc = findKeyword(source, "int");
+    while(iLoc!=std::string::npos) {
+        auto mLoc = iLoc + 3;
+        while(mLoc<source.size() && isspace(source[mLoc])) {
+            mLoc++;
+        }
+        if(mLoc==source.size()) {
+            return std::nullopt;
+        }
+        if(mLoc!=iLoc+3 && source.substr(mLoc, 4)=="main") {
+            auto pLoc = mLoc+4;
+            while(pLoc<source.size() && std::isspace(source[pLoc])) {
+                pLoc++;
+            }
+            if(pLoc>=source.size()) {
+                return std::nullopt;
+            }
+            if(source[pLoc]=='(') {
+                auto ed = pLoc;
+                int ba = 0;
+                while(ed<source.size()) {
+                    if(source[ed]=='(')
+                        ba++;
+                    else if(source[ed]==')')
+                        ba--;
+                    if(ba==0) {
+                        break;
+                    }
+                    ed++;
+                }
+                while(ed<source.size() && source[ed]!='{') {
+                    ed++;
+                }
+                if(ed==source.size()) {
+                    return std::nullopt;
+                }
+                while(ed<source.size()) {
+                    if(source[ed]=='{')
+                        ba++;
+                    else if(source[ed]=='}')
+                        ba--;
+                    if(ba==0) {
+                        break;
+                    }
+                    ed++;
+                }
+                if(ed==source.size()) {
+                    return std::nullopt;
+                }
+                return std::make_pair(iLoc, ed);
+            }
+        }
+        iLoc = findKeyword(source, "int", iLoc+1);
+    }
+    return std::nullopt;
+}
+
+void processSourceCpp(const std::string &source, const std::string &o_path) {
     // Remove the comments and string and character literals
-    std::string newSource = removeCommentsAndStrs(source);
+    auto [purifiedSource, mapping] = removeCommentsAndStrs(source);
     
     // Find all class definitions
-    auto klasses = findKlassDefinitions(newSource);
+    auto klasses = findKlassDefinitions(purifiedSource);
     if(klasses.size()==0) {
         throw std::runtime_error("Cannot find any class definition in the given source!");
     }
@@ -434,22 +532,16 @@ void processSourceCpp(std::string &source, std::string o_path) {
         throw std::runtime_error("Cannot find the Solution class!");
     }
     auto solutionKlass = klasses[si];
-    auto solutionKlassBody = newSource.substr(solutionKlass.st, solutionKlass.ct);
+    auto solutionKlassBody = purifiedSource.substr(solutionKlass.st, solutionKlass.ct);
 
+    // Find all functions of the Solution class
     auto funcs = findFunctionDefinitions(solutionKlassBody);
-
-    // std::cout << "Funcs:" << std::endl;
-    // for(auto func:funcs) {
-    //     std::cout << func.ret_type << " " << func.name << std::endl;
-    //     for(auto param:func.params) {
-    //         std::cout << param.type << " " << param.name << "; ";
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     if(funcs.size()==0) {
         throw std::runtime_error("Cannot find any public function in the Solution class.");
     }
+
+    // Let the user select one function as the entry function.
     Function func;
     if(funcs.size() == 1)
         func = funcs[0];
@@ -468,7 +560,26 @@ void processSourceCpp(std::string &source, std::string o_path) {
         func = funcs[ans];
     }
 
-    std::cout << "Generating IO code for function \"" << func.name << "\" ..." << std::endl;
+    // std::cout << "Generating IO code for function \"" << func.name << "\" ..." << std::endl;
 
-    std::cout << generateMainFunction(func) << std::endl;
+    // Generate the main function
+    std::string newMainFunc = generateMainFunction(func);
+    std::string newSource = source + "\n";
+
+    // Remove the original main function
+    auto mainFuncLoc = findMainFunction(purifiedSource);
+    if(mainFuncLoc.has_value()) {
+        auto [st, ed] = *mainFuncLoc;
+        newSource.erase(mapping[st], mapping[ed] - mapping[st] + 1);
+    }
+
+    // Insert the necessary headers.
+    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream"});
+
+    // Insert the generated main function at the end of the source.
+    newSource.append(newMainFunc);
+
+    // Write to file.
+    writeStringToFile(o_path, newSource);
+    std::cout << std::format("New code has been written to {}.", std::filesystem::canonical(o_path).c_str()) << std::endl;
 }

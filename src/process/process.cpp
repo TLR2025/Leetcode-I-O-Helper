@@ -27,7 +27,7 @@ std::map<std::string, std::string> e2l = {
     {"ex", "elixir"}
 };
 
-void processSource(std::string &source, std::string lang, std::string o_path, int id) {
+void processSource(std::string &source, std::string lang, std::string o_path) {
     if(lang=="cpp") {
         processSourceCpp(source, o_path);
     } else {
