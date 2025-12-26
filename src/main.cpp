@@ -19,7 +19,7 @@ std::unordered_set<std::string> langs = {"cpp"};
 std::string APP_VERSION = "1.0.0";
 
 int main(int argc, char* argv[]) {
-    CLI::App app{"A tool that can automatically generate the main function based on a LeetCode's Solution class.", "LeetCode I/O helper"};
+    CLI::App app{"A tool that can automatically generate the Input/Output logic based on a LeetCode's Solution class.", "LeetCode I/O helper"};
     argv = app.ensure_utf8(argv);
     std::string src_path = "", o_path = "", lang = "";
 
