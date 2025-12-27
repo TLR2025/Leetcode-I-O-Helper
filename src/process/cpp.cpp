@@ -309,15 +309,15 @@ auto generate1DInput(const std::string& type) {
     std::string rel_tp = type.substr(7, type.rfind('>') - 7);
     if(type == "vector<bool>") {
         return std::string("\t") + 
-R"(auto input_1d_bool_=[&](const string&str){vector<bool>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.find("true")!=string::npos);}return result;};)"
+R"(auto input_1d_bool_=[&](const string&str){vector<bool>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return result;vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.find("true")!=string::npos);}return result;};)"
         + "\n";
     } else if(type == "vector<string>") {
         return std::string("\t") + 
-R"(auto input_1d_string_=[&](const string&str){vector<string>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.substr(it.find('\"')+1,it.rfind('\"')-it.find('\"')-1));}return result;};)"
+R"(auto input_1d_string_=[](const string&s){vector<string>res;string temp;bool in_str=false;for(size_t i=0;i<s.size();++i){char c=s[i];if(c!='\\'){if(c=='"'){if(in_str){res.push_back(temp);temp.clear();}in_str=!in_str;}else if(in_str){temp.push_back(c);}continue;}if(++i>=s.size()||!in_str){throw runtime_error("Dangling backslash");}switch(s[i]){case '"':temp.push_back('"');break;case '\\':temp.push_back('\\');break;case '/':temp.push_back('/');break;case 'b':temp.push_back('\b');break;case 'f':temp.push_back('\f');break;case 'n':temp.push_back('\n');break;case 'r':temp.push_back('\r');break;case 't':temp.push_back('\t');break;default:throw runtime_error("Invalid escape");}}return res;};)"
         + "\n";
     } else if(type == "vector<char>") {
         return std::string("\t") + 
-R"(auto input_1d_char_=[&](const string&str){vector<char>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(it.substr(it.find('\"')+1,it.rfind('\"')-it.find('\"')-1)[0]);}return result;};)"
+R"(auto input_1d_char_=[](const string&s){vector<char>res;for(size_t i=0;i<s.size();++i){char c=s[i];if(c=='"'){if(++i<s.size()){if(s[i]!='\\'){res.push_back(s[i]);}else{if(++i<s.size()){switch(s[i]){case '"':res.push_back('"');break;case '\\':res.push_back('\\');break;case '/':res.push_back('/');break;case 'b':res.push_back('\b');break;case 'f':res.push_back('\f');break;case 'n':res.push_back('\n');break;case 'r':res.push_back('\r');break;case 't':res.push_back('\t');break;default:throw runtime_error("Invalid escape");}}else{throw runtime_error("Parsing error!");}}++i;if(i>s.size()||s[i]!='"'){throw runtime_error("Parsing error!");}}else{throw runtime_error("Parsing error!");}}}return res;};)"
         + "\n";
     } else {
         std::string convertFunction;
@@ -347,11 +347,11 @@ R"(auto input_2d_bool_=[&](const string&str){vector<vector<bool>>result;auto st=
         + "\n";
     } else if(type == "vector<vector<string>>") {
         return std::string("\t") + 
-R"(auto input_2d_string_=[&](const string&str){vector<vector<string>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.substr(res_str.find('\"')+1,res_str.rfind('\"')-res_str.find('\"')-1));}i=rpos;}}return result;};)"
+R"(auto input_2d_string_=[](const string&s){auto st=s.find('['),ed=s.rfind(']');if(st==string::npos||ed==string::npos||ed<st){throw runtime_error("Parsing error!");}vector<vector<string>>res;string temp;bool in_str=false;for(size_t i=st+1;i<ed;++i){char c=s[i];if(c=='['&&!in_str){res.emplace_back();continue;}else if(c!='\\'){if(c=='"'){if(in_str){res[res.size()-1].push_back(temp);temp.clear();}in_str=!in_str;}else if(in_str){temp.push_back(c);}continue;}if(++i>=s.size()||!in_str){throw runtime_error("Dangling backslash");}switch(s[i]){case '"':temp.push_back('"');break;case '\\':temp.push_back('\\');break;case '/':temp.push_back('/');break;case 'b':temp.push_back('\b');break;case 'f':temp.push_back('\f');break;case 'n':temp.push_back('\n');break;case 'r':temp.push_back('\r');break;case 't':temp.push_back('\t');break;default:throw runtime_error("Invalid escape");}}return res;};)"
         + "\n";
     } else if(type == "vector<vector<char>>") {
         return std::string("\t") + 
-R"(auto input_2d_char_=[&](const string&str){vector<vector<char>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.substr(res_str.find('\"')+1,res_str.rfind('\"')-res_str.find('\"')-1)[0]);}i=rpos;}}return result;};)"
+R"(auto input_2d_char_=[](const string&s){auto st=s.find('['),ed=s.rfind(']');if(st==string::npos||ed==string::npos||ed<st){throw runtime_error("Parsing error!");}vector<vector<char>>res;for(size_t i=st+1;i<ed;++i){char c=s[i];if(c=='['){res.emplace_back();}if(c=='"'){if(++i<s.size()){if(s[i]!='\\'){res[res.size()-1].push_back(s[i]);}else{if(++i<s.size()){switch(s[i]){case '"':res[res.size()-1].push_back('"');break;case '\\':res[res.size()-1].push_back('\\');break;case '/':res[res.size()-1].push_back('/');break;case 'b':res[res.size()-1].push_back('\b');break;case 'f':res[res.size()-1].push_back('\f');break;case 'n':res[res.size()-1].push_back('\n');break;case 'r':res[res.size()-1].push_back('\r');break;case 't':res[res.size()-1].push_back('\t');break;default:throw runtime_error("Invalid escape");}}else{throw runtime_error("Parsing error!");}}++i;if(i>s.size()||s[i]!='"'){throw runtime_error("Parsing error!");}}else{throw runtime_error("Parsing error!");}}}return res;};)"
         + "\n";
     } else {
         std::string convertFunction;
@@ -384,6 +384,8 @@ std::string generateMainFunction(Function &func) {
     std::unordered_set<std::string> _1d;
     // All 2d types
     std::unordered_set<std::string> _2d;
+    // Is the split_ function needed?
+    bool needSplit = false;
     for (std::size_t i = 0; i < func.params.size(); i++) {
         std::string tp = func.params[i].type;
         // Delete &
@@ -413,6 +415,8 @@ std::string generateMainFunction(Function &func) {
             }
         } else if (std::find(oneDimension.begin(), oneDimension.end(), tp) != oneDimension.end()) {
             _1d.insert(tp);
+            if (tp != "vector<char>" && tp != "vector<string>") 
+                needSplit = true;
             src += std::format("\tstd::string {}_str;\n", nm);
             src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
@@ -422,6 +426,8 @@ std::string generateMainFunction(Function &func) {
             nm);
         } else if (std::find(twoDimension.begin(), twoDimension.end(), tp) != twoDimension.end()) {
             _2d.insert(tp);
+            if (tp != "vector<vector<char>>" && tp != "vector<vector<string>>") 
+                needSplit = true;
             src += std::format("\tstd::string {}_str;\n", nm);
             src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
@@ -438,8 +444,8 @@ std::string generateMainFunction(Function &func) {
         for(auto &tp:_2d) {
             src.insert(lambdaInsertLoc, generate2DInput(tp));
         }
-        if(_1d.size() || _2d.size()) {
-            // split_
+        if(needSplit) {
+            // Insert lambda function split_
             src.insert(lambdaInsertLoc, 
                 std::string("\t") 
                 + R"(auto split_=[](const std::string&str,char c,bool allowEmpty){std::string t="";std::vector<std::string>result;for(int i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};)"
@@ -574,7 +580,7 @@ void processSourceCpp(const std::string &source, const std::string &o_path) {
     }
 
     // Insert the necessary headers.
-    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream"});
+    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream", "stdexcept"});
 
     // Insert the generated main function at the end of the source.
     newSource.append(newMainFunc);

@@ -9,11 +9,9 @@
 #include "process/process.hpp"
 #include "process/cpp.hpp"
 #include "CLI11.hpp"
-#include "json.hpp"
 #include "utils/selection.hpp"
 
 namespace fs = std::filesystem;
-using json = nlohmann::json;
 
 std::unordered_set<std::string> langs = {"cpp"};
 std::string APP_VERSION = "1.0.0";
