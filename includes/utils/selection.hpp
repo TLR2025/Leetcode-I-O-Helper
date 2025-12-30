@@ -1,0 +1,16 @@
+#pragma once
+
+#include "inquirer.hpp"
+#include "str_utils.hpp"
+
+/**
+ * @brief Show a selection message and await the user input.
+ */
+inline int selection(const std::string &q, const std::vector<std::string> &arr) {
+    auto inquirer = alx::Inquirer("");
+    auto token = randomString(8);
+    inquirer.add_question({token, q, arr});
+    inquirer.ask();
+    int ans = std::find(arr.begin(), arr.end(), inquirer.answer(token)) - arr.begin();
+    return ans;
+}
