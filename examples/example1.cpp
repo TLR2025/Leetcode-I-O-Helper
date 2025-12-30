@@ -1,3 +1,4 @@
+// Leetcode P3625
 #include <bits/stdc++.h>
 using namespace std;
 typedef vector<int> Point;
@@ -9,8 +10,7 @@ struct SdWithB {
 const double INF = 2e3+10;
 const double K = 2e8;
 class Solution {
-public:
-// private:
+private:
 	double slope(const Side& side) {
 		// Calcular el pendiente.
 		if(side.first->at(0)<side.second->at(0)) {
@@ -190,3 +190,17 @@ public:
 3 2
 2 -3
 */
+
+int main(int argc, char* argv[]) {
+	Solution solution;
+	auto split_=[](const string&str,char c,bool allowEmpty){string t="";std::vector<string>result;for(size_t i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};
+	auto input_2d_int_=[&](const string&str){vector<vector<int>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&num_str:row_data){result.back().push_back(stoi(num_str));}i=rpos;}}return result;};
+	vector<vector<int>> points;
+	cout << "points: ";
+	string points_str;
+	getline(std::cin, points_str);
+	points = input_2d_int_(points_str);
+	auto result_ = solution.countTrapezoids(points);
+	cout << "result: " << endl;	cout << result_ << endl;
+	return 0;
+}

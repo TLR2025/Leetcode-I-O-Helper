@@ -1,5 +1,5 @@
 /*
-NOT SUPPORTED TYPES:
+UNSUPPORTED TYPES:
 ListNode
 Master
 MountainArray
@@ -36,11 +36,12 @@ struct Var {
 struct Function {
     std::string name;
     std::vector<Var> params;
-    std::string ret_type;
+    std::string retType;
 };
 
 
-const std::array<std::string, 5> zeroDimension = {
+const std::array<std::string, 6> zeroDimension = {
+    "bool",
     "char",
     "double",
     "int",
@@ -58,16 +59,16 @@ const std::array<std::string, 6> oneDimension = {
 };
 
 const std::array<std::string, 6> twoDimension = {
+    "vector<vector<bool>>",
     "vector<vector<char>>",
+    "vector<vector<double>>",
     "vector<vector<int>>",
     "vector<vector<long long>>",
     "vector<vector<string>>",
-    "vector<vector<bool>>",
-    "vector<vector<double>>"
 };
 
 /**
- * @brief Remove all comment codes and string and character literals of the source.
+ * @brief Remove all comment code and string and character literals of the source.
  * @return A pair that contains the new source code and the mapping array.
  * @param source The original source string.
  */
@@ -331,8 +332,8 @@ R"(auto input_1d_char_=[](const string&s){vector<char>res;for(size_t i=0;i<s.siz
             throw std::runtime_error("Unsupported type: \"" + type + "\".");
         }
         return ("\t" + std::format(
-R"(auto input_1d_{}_=[&](const string&str){{vector<{}>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return {{}};vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){{result.push_back({}(it));}}return result;}};)",
-        rel_tp, rel_tp, convertFunction));
+R"(auto input_1d_{}_=[&](const string&str){{vector<{}>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return result;vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){{result.push_back({}(it));}}return result;}};)",
+        rel_tp, rel_tp, convertFunction) + "\n");
     }
 }
 
@@ -340,7 +341,7 @@ R"(auto input_1d_{}_=[&](const string&str){{vector<{}>result;auto st=str.find('[
  * Given an 2d type, return its input code (that will be a lambda function). 
  */
 auto generate2DInput(const std::string& type) {
-    std::string rel_tp = type.substr(type.rfind('<'), type.find('>'));
+    std::string rel_tp = type.substr(type.rfind('<') + 1, type.find('>') - type.rfind('<') - 1);
 if(type == "vector<vector<bool>>") {
         return std::string("\t") + 
 R"(auto input_2d_bool_=[&](const string&str){vector<vector<bool>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){if(str[i]=='['){auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&res_str:row_data){result.back().push_back(res_str.find("true")!=string::npos);}i=rpos;}}return result;};)"
@@ -366,8 +367,34 @@ R"(auto input_2d_char_=[](const string&s){auto st=s.find('['),ed=s.rfind(']');if
         }
         return ("\t" + std::format(
 R"(auto input_2d_{}_=[&](const string&str){{vector<vector<{}>>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos||st>=ed)return result;for(size_t i=st+1;i<ed;++i){{if(str[i]=='['){{auto rpos=str.find(']',i);if(rpos==string::npos)break;string row=str.substr(i+1,rpos-i-1);auto row_data=split_(row,',',false);result.emplace_back();for(auto&num_str:row_data){{result.back().push_back({}(num_str));}}i=rpos;}}}}return result;}};)",
-            rel_tp, rel_tp, convertFunction));
+            rel_tp, rel_tp, convertFunction) + "\n");
     }
+}
+
+/**
+ * Based on the function's return type, generate the corresponding output code for the `result_` variable.
+ */
+std::string generateOutputCode(const std::string& type) {
+    if(std::find(zeroDimension.begin(), zeroDimension.end(), type) != zeroDimension.end()) {
+        if(type == "bool")
+            return "\tcout << boolalpha << result_ << endl;\n";
+        if(type == "string" || type == "char")
+            return "\tcout << '\"' << result_ << '\"' << endl;\n";
+        return "\tcout << result_ << endl;\n";
+    } else if(std::find(oneDimension.begin(), oneDimension.end(), type) != oneDimension.end()) {
+        if(type == "vector<bool>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<boolalpha<<"["<<result_[0];for(size_t i=1;i<result_.size();i++){cout<<boolalpha<<", "<<result_[i];}cout<<"]"<<endl;})" + "\n";
+        if(type == "vector<string>" || type == "vector<char>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<"[\"" << result_[0] << "\"";for(size_t i=1;i<result_.size();i++){cout<<", \"" << result_[i] << "\"";}cout<<"]"<<endl;})" + "\n";
+        return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<"["<<result_[0];for(size_t i=1;i<result_.size();i++){cout<<", "<<result_[i];}cout<<"]"<<endl;})" + "\n";
+    } else if(std::find(twoDimension.begin(), twoDimension.end(), type) != twoDimension.end()) {
+        if(type == "vector<vector<bool>>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(5)<<boolalpha<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(5)<<boolalpha<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+        if(type == "vector<vector<string>>" || type == "vector<vector<char>>") 
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<'"'<<row_[0]<<'"';for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<'"'<<row_[j]<<'"';}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+        return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(10)<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(10)<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+    }
+    throw std::runtime_error("");
 }
 
 // Reimplement using std::format
@@ -394,31 +421,37 @@ std::string generateMainFunction(Function &func) {
 
         std::string nm = func.params[i].name;
 
-        src += std::format("\tstd::cout << \"{}: \";\n", nm);
+        src += std::format("\tcout << \"{}: \";\n", nm);
 
         if (std::find(zeroDimension.begin(), zeroDimension.end(), tp) != zeroDimension.end()) {
-            if (tp == "string") {
-                src += std::format("\tgetline(cin, {});\n", nm);
+            if(tp == "bool") {
+                src += std::format("\tcin >> boolalpha >> {};\n", nm);
+            } else if (tp == "string") {
+                src += std::format("\tgetline(cin, {});\n\t", nm);
                 src += std::format(
-                    "\t{} = {}.substr({}.find('\"') + 1, {}.rfind('\"') - {}.find('\"') - 1);\n",
-                    nm, nm, nm, nm, nm
+                    R"({}={}.substr({}.find('\"')+1,{}.rfind('\"')-{}.find('\"')-1);for(size_t i=0;i<{}.size();i++){{if({}[i]!='\\')continue;switch({}[i+1]){{case '"':{}.replace(i,2,"\"");;break;case '\\':{}.replace(i,2,"\\");;break;case '/':{}.replace(i,2,"/");;break;case 'b':{}.replace(i,2,"\b");;break;case 'f':{}.replace(i,2,"\f");;break;case 'n':{}.replace(i,2,"\n");;break;case 'r':{}.replace(i,2,"\r");;break;case 't':{}.replace(i,2,"\t");;break;default:throw std::runtime_error("Invalid escape");}}}})",
+                    nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm
                 );
             } else if (tp == "char") {
                 src += std::format("\tstring {}_str;\n", nm);
-                src += std::format("\tcin >> {}_str;\n", nm);
+                src += std::format("\tgetline(cin, {}_str);\n", nm);
                 src += std::format(
-                    "\t{} = {}_str.substr({}_str.find('\"') + 1, {}_str.rfind('\"') - {}_str.find('\"') - 1)[0];\n",
+                    "\t{}_str = {}_str.substr({}_str.find('\"') + 1, {}_str.rfind('\"') - {}_str.find('\"') - 1);\n",
                     nm, nm, nm, nm, nm
                 );
+                src += "\t" + std::format(
+                    R"({}={}_str[0]=='\\'?({}_str[1]=='"'?'"':({}_str[1]=='\\'?'\\':({}_str[1]=='/'?'/':({}_str[1]=='b'?'\b':({}_str[1]=='f'?'\f':({}_str[1]=='n'?'\n':({}_str[1]=='r'?'\r':({}_str[1]=='t'?'\t':' ')))))))):{}_str[0];)",
+                    nm, nm, nm, nm, nm, nm, nm, nm, nm, nm, nm
+                ) + "\n";
             } else {
-                src += std::format("\tstd::cin >> {};\n", nm);
+                src += std::format("\tcin >> {};\n", nm);
             }
         } else if (std::find(oneDimension.begin(), oneDimension.end(), tp) != oneDimension.end()) {
             _1d.insert(tp);
             if (tp != "vector<char>" && tp != "vector<string>") 
                 needSplit = true;
-            src += std::format("\tstd::string {}_str;\n", nm);
-            src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
+            src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
                  std::format("input_1d_{}_",
                      tp.substr(tp.find('<') + 1, tp.find('>') - tp.find('<') - 1)
@@ -428,8 +461,8 @@ std::string generateMainFunction(Function &func) {
             _2d.insert(tp);
             if (tp != "vector<vector<char>>" && tp != "vector<vector<string>>") 
                 needSplit = true;
-            src += std::format("\tstd::string {}_str;\n", nm);
-            src += std::format("\tstd::getline(std::cin, {}_str);\n", nm);
+            src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
                  std::format("input_2d_{}_",
                      tp.substr(tp.rfind('<') + 1, tp.find('>') - tp.rfind('<') - 1)
@@ -438,22 +471,29 @@ std::string generateMainFunction(Function &func) {
         } else {
             throw std::runtime_error("Unsupported type: \"" + tp + "\".");
         }
-        for(auto &tp:_1d) {
-            src.insert(lambdaInsertLoc, generate1DInput(tp));
-        }
-        for(auto &tp:_2d) {
-            src.insert(lambdaInsertLoc, generate2DInput(tp));
-        }
-        if(needSplit) {
-            // Insert lambda function split_
-            src.insert(lambdaInsertLoc, 
-                std::string("\t") 
-                + R"(auto split_=[](const std::string&str,char c,bool allowEmpty){std::string t="";std::vector<std::string>result;for(int i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};)"
-                + "\n"
-            );
-        }
     }
-
+    for(auto &tp:_1d) {
+        src.insert(lambdaInsertLoc, generate1DInput(tp));
+    }
+    for(auto &tp:_2d) {
+        src.insert(lambdaInsertLoc, generate2DInput(tp));
+    }
+    if(needSplit) {
+        // Insert lambda function split_
+        src.insert(lambdaInsertLoc, 
+            std::string("\t") 
+            + R"(auto split_=[](const string&str,char c,bool allowEmpty){string t="";std::vector<string>result;for(size_t i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};)"
+            + "\n"
+        );
+    }
+    // Call the entry function and get result
+    std::string paramStr = func.params[0].name;
+    for(int i=1;i<func.params.size();i++) 
+        paramStr.append(", " + func.params[i].name);
+    src += std::format("\tauto result_ = solution.{}({});\n", func.name, paramStr);
+    src += "\tcout << \"result: \" << endl;";
+    src += generateOutputCode(func.retType);
+    // End of main function
     src += "\treturn 0;\n}";
     return src;
 }
@@ -554,7 +594,7 @@ void processSourceCpp(const std::string &source, const std::string &o_path) {
     else {
         std::vector<std::string> stred_funcs(funcs.size());
         for(int i=0;i<funcs.size();i++) {
-            stred_funcs[i] = funcs[i].ret_type + ' ' + funcs[i].name + '(';
+            stred_funcs[i] = funcs[i].retType + ' ' + funcs[i].name + '(';
             for(int j=0;j<funcs[i].params.size();j++) {
                 stred_funcs[i] += funcs[i].params[j].type + ' ' + funcs[i].params[j].name;
                 if(j!=funcs[i].params.size()-1)
@@ -587,5 +627,5 @@ void processSourceCpp(const std::string &source, const std::string &o_path) {
 
     // Write to file.
     writeStringToFile(o_path, newSource);
-    std::cout << std::format("New code has been written to {}.", std::filesystem::canonical(o_path).c_str()) << std::endl;
+    std::wcout << "New code has been written to " << std::filesystem::canonical(o_path).c_str() << "." << std::endl;
 }
