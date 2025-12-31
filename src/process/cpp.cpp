@@ -236,10 +236,10 @@ auto findFunctionDefinitions(const std::string &source) {
             // params: Function's params
             auto params = extractParameters(source.substr(pst, ped-pst+1));
             int ned = pst-1; // name's end position
-            while(std::isspace(ned)) {
+            while(ned >= 0 && std::isspace(source[ned])) {
                 ned--;
             }
-            if(!isalnum(source[ned]) && source[ned]!='_') 
+            if(ned < 0 ||(!isalnum(source[ned]) && source[ned]!='_')) 
                 continue;
             int nst = ned-1; // name's start position
             while(nst>=0 && !std::isspace(source[nst])) {
@@ -378,23 +378,29 @@ std::string generateOutputCode(const std::string& type) {
     if(std::find(zeroDimension.begin(), zeroDimension.end(), type) != zeroDimension.end()) {
         if(type == "bool")
             return "\tcout << boolalpha << result_ << endl;\n";
-        if(type == "string" || type == "char")
-            return "\tcout << '\"' << result_ << '\"' << endl;\n";
+        if(type == "string")
+            return std::string("\t") + R"(cout<<'"';for(size_t i=0;i<result_.size();i++){char ch_[2]={result_[i],'\0'};cout<<(result_[i]=='"'?"\\\"" : (result_[i] == '\\' ? "\\\\" : (result_[i] == '\b' ? "\\b" : (result_[i] == '\f' ? "\\f" : (result_[i] == '\n' ? "\\n" : (result_[i] == '\r' ? "\\r" : (result_[i] == '\t' ? "\\t" : ch_)))))));}cout<<'"';)" + "\n";
+        if(type == "char")
+            return std::string("\t") + R"(char result_str_[]={result_,'\0'};cout<<'"';cout<<(result_=='"'?"\\\"" : (result_=='\\' ? "\\\\" : (result_=='\b' ? "\\b" : (result_ == '\f' ? "\\f" : (result_ == '\n' ? "\\n" : (result_ == '\r' ? "\\r" : (result_ == '\t' ? "\\t" : result_str_)))))));cout<<'"';)" + "\n";
         return "\tcout << result_ << endl;\n";
     } else if(std::find(oneDimension.begin(), oneDimension.end(), type) != oneDimension.end()) {
         if(type == "vector<bool>")
             return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<boolalpha<<"["<<result_[0];for(size_t i=1;i<result_.size();i++){cout<<boolalpha<<", "<<result_[i];}cout<<"]"<<endl;})" + "\n";
-        if(type == "vector<string>" || type == "vector<char>")
-            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<"[\"" << result_[0] << "\"";for(size_t i=1;i<result_.size();i++){cout<<", \"" << result_[i] << "\"";}cout<<"]"<<endl;})" + "\n";
+        if(type == "vector<string>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'[';for(size_t i=0;i<result_.size();i++){if(i!=0)cout<<", ";cout<<'"';for(size_t j=0;j<result_[i].size();j++){char ch_[2]={result_[i][j],'\0'};cout<<(result_[i][j]=='"'?"\\\"" : (result_[i][j] == '\\' ? "\\\\" : (result_[i][j] == '\b' ? "\\b" : (result_[i][j] == '\f' ? "\\f" : (result_[i][j] == '\n' ? "\\n" : (result_[i][j] == '\r' ? "\\r" : (result_[i][j] == '\t' ? "\\t" : ch_)))))));}cout<<'"';}cout<<']'<<endl;})" + "\n";
+        if(type == "vector<char>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'[';for(size_t i=0;i<result_.size();i++){if(i!=0)cout<<", ";cout<<'"';char ch_[2]={result_[i],'\0'};cout<<(result_[i]=='"'?"\\\"" : (result_[i] == '\\' ? "\\\\" : (result_[i] == '\b' ? "\\b" : (result_[i] == '\f' ? "\\f" : (result_[i] == '\n' ? "\\n" : (result_[i] == '\r' ? "\\r" : (result_[i] == '\t' ? "\\t" : ch_)))))));cout<<'"';}cout<<']'<<endl;})" + "\n";
         return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<"["<<result_[0];for(size_t i=1;i<result_.size();i++){cout<<", "<<result_[i];}cout<<"]"<<endl;})" + "\n";
     } else if(std::find(twoDimension.begin(), twoDimension.end(), type) != twoDimension.end()) {
         if(type == "vector<vector<bool>>")
             return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(5)<<boolalpha<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(5)<<boolalpha<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
-        if(type == "vector<vector<string>>" || type == "vector<vector<char>>") 
-            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<'"'<<row_[0]<<'"';for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<'"'<<row_[j]<<'"';}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+        if(type == "vector<vector<string>>") 
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";for(size_t j=0;j<row_.size();j++){if(j!=0)cout<<", ";cout<<'"';for(size_t k=0;k<row_[j].size();k++){char ch_[2]={row_[j][k],'\0'};cout<<(row_[j][k]=='"'?"\\\"" : (row_[j][k]=='\\' ? "\\\\" : (row_[j][k]=='\b' ? "\\b" : (row_[j][k] == '\f' ? "\\f" : (row_[j][k] == '\n' ? "\\n" : (row_[j][k] == '\r' ? "\\r" : (row_[j][k] == '\t' ? "\\t" : ch_)))))));}cout<<'"';}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+        if(type == "vector<vector<char>>")
+            return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'[';for(size_t i=0;i<result_.size();i++){if(i!=0)cout<<", ";cout<<'"';char ch_[2]={result_[i],'\0'};cout<<(result_[i]=='"'?"\\\"" : (result_[i] == '\\' ? "\\\\" : (result_[i] == '\b' ? "\\b" : (result_[i] == '\f' ? "\\f" : (result_[i] == '\n' ? "\\n" : (result_[i] == '\r' ? "\\r" : (result_[i] == '\t' ? "\\t" : ch_)))))));cout<<'"';}cout<<']'<<endl;})" + "\n";
         return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(10)<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(10)<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
     }
-    throw std::runtime_error("");
+    throw std::runtime_error("An error has occurred while generating the output code.");
 }
 
 // Reimplement using std::format
@@ -491,7 +497,7 @@ std::string generateMainFunction(Function &func) {
     for(int i=1;i<func.params.size();i++) 
         paramStr.append(", " + func.params[i].name);
     src += std::format("\tauto result_ = solution.{}({});\n", func.name, paramStr);
-    src += "\tcout << \"result: \" << endl;";
+    src += "\tcout << \"result: \" << endl;\n";
     src += generateOutputCode(func.retType);
     // End of main function
     src += "\treturn 0;\n}";

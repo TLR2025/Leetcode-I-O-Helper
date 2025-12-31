@@ -1,21 +1,40 @@
-#include <bits/stdc++.h>
+#include <stdexcept>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
 using namespace std;
+// P1
 class Solution {
 public:
-    int test(vector<string>&arr) {
-        
+    vector<int> twoSum(vector<int> &nums, int target) {
+        unordered_map<int, int> hash;
+        for (int i = 0; i < nums.size(); ++i) {
+            int complement = target - nums[i];
+            if (hash.find(complement) != hash.end()) {
+                return {hash[complement], i};
+            }
+            hash[nums[i]] = i;
+        }
+        // Return an empty vector if no solution is found
+        return {};
     }
 };
-
 int main(int argc, char* argv[]) {
 	Solution solution;
-	auto input_1d_string_=[](const string&s){vector<string>res;string temp;bool in_str=false;for(size_t i=0;i<s.size();++i){char c=s[i];if(c!='\\'){if(c=='"'){if(in_str){res.push_back(temp);temp.clear();}in_str=!in_str;}else if(in_str){temp.push_back(c);}continue;}if(++i>=s.size()||!in_str){throw runtime_error("Dangling backslash");}switch(s[i]){case '"':temp.push_back('"');break;case '\\':temp.push_back('\\');break;case '/':temp.push_back('/');break;case 'b':temp.push_back('\b');break;case 'f':temp.push_back('\f');break;case 'n':temp.push_back('\n');break;case 'r':temp.push_back('\r');break;case 't':temp.push_back('\t');break;default:throw runtime_error("Invalid escape");}}return res;};
-	vector<string> arr;
-	cout << "arr: ";
-	string arr_str;
-	getline(std::cin, arr_str);
-	arr = input_1d_string_(arr_str);
-	auto result_ = solution.test(arr);
-	cout << "result: " << endl;	cout << result_ << endl;
+	auto split_=[](const string&str,char c,bool allowEmpty){string t="";std::vector<string>result;for(size_t i=0;i<str.size();i++){if(str[i]!=c)t.push_back(str[i]);else{if(allowEmpty||t!="")result.push_back(t);t="";}}if(allowEmpty||t!=""){result.push_back(t);}return result;};
+	auto input_1d_int_=[&](const string&str){vector<int>result;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return result;vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);for(auto&it:res_str){result.push_back(stoi(it));}return result;};
+	vector<int> nums;
+	cout << "nums: ";
+	string nums_str;
+	getline(std::cin, nums_str);
+	nums = input_1d_int_(nums_str);
+	int target;
+	cout << "target: ";
+	cin >> target;
+	auto result_ = solution.twoSum(nums, target);
+	cout << "result: " << endl;
+	if(result_.size()==0)cout<<"[]"<<endl;else{cout<<"["<<result_[0];for(size_t i=1;i<result_.size();i++){cout<<", "<<result_[i];}cout<<"]"<<endl;}
 	return 0;
 }
