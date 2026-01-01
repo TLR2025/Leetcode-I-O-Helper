@@ -21,22 +21,22 @@ jobs:
             compiler: gcc
             c_compiler: gcc
             cpp_compiler: g++
-            artifact_name: lioh-linux-gcc-${{ github.ref_name }}
             exe_path: build/bin/lioh
+            out_name: lioh-linux-gcc-${{ github.ref_name }}
 
           - os: ubuntu-latest
             compiler: clang
             c_compiler: clang
             cpp_compiler: clang++
-            artifact_name: lioh-linux-clang-${{ github.ref_name }}
             exe_path: build/bin/lioh
+            out_name: lioh-linux-clang-${{ github.ref_name }}
 
           - os: windows-latest
             compiler: msvc
             c_compiler: cl
             cpp_compiler: cl
-            artifact_name: lioh-windows-msvc.exe-${{ github.ref_name }}
-            exe_path: build/bin/Release/lioh.exe
+            exe_path: D:/a/Leetcode-I-O-Helper/Leetcode-I-O-Helper/build/bin/Release/lioh.exe
+            out_name: lioh-windows-msvc-${{ github.ref_name }}.exe
 
     steps:
       - name: Checkout
@@ -56,14 +56,28 @@ jobs:
         working-directory: build
         run: ctest --build-config Release
 
+      - name: Prepare artifact on Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p artifacts
+          cp "${{ matrix.exe_path }}" "artifacts/${{ matrix.out_name }}"
+        shell: bash
+
+      - name: Prepare artifact on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Copy-Item -Path "${{ matrix.exe_path }}" -Destination "artifacts\\${{ matrix.out_name }}" -Force
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.exe_path }}
+          name: ${{ matrix.out_name }}
+          path: artifacts/${{ matrix.out_name }}
 
   release:
-    name: Create GitHub Release
+    name: Create GitHub Release and upload assets
     needs: build
     runs-on: ubuntu-latest
 
@@ -73,7 +87,10 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Release
-        uses: softprops/action-gh-release@v2
+      - name: Create or update Release and upload assets (robust)
+        uses: ncipollo/release-action@v1
         with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           files: artifacts/**/*
+          overwrite: true
