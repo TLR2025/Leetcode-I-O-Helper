@@ -21,21 +21,21 @@ jobs:
             compiler: gcc
             c_compiler: gcc
             cpp_compiler: g++
-            artifact_name: lioh-linux-gcc
+            artifact_name: lioh-linux-gcc-${{ github.ref_name }}
             exe_path: build/bin/lioh
 
           - os: ubuntu-latest
             compiler: clang
             c_compiler: clang
             cpp_compiler: clang++
-            artifact_name: lioh-linux-clang
+            artifact_name: lioh-linux-clang-${{ github.ref_name }}
             exe_path: build/bin/lioh
 
           - os: windows-latest
             compiler: msvc
             c_compiler: cl
             cpp_compiler: cl
-            artifact_name: lioh-windows-msvc.exe
+            artifact_name: lioh-windows-msvc.exe-${{ github.ref_name }}
             exe_path: build/bin/Release/lioh.exe
 
     steps:
