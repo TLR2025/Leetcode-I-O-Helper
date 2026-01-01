@@ -48,7 +48,6 @@ jobs:
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=Release
-
       - name: Build
         run: cmake --build build --config Release
 
@@ -69,7 +68,6 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           Copy-Item -Path "${{ matrix.exe_path }}" -Destination "artifacts\\${{ matrix.out_name }}" -Force
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -87,13 +85,24 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts structure for debugging
+        run: find artifacts -type f
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release_artifacts
+          
+          find artifacts -type f -name "lioh-*" -exec cp {} release_artifacts/ \;
+          
+          echo "Files to be released:"
+          ls -la release_artifacts/
+
       - name: Create/Update Release and attach artifacts
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: artifacts/**/*
+          artifacts: release_artifacts/*
           allowUpdates: true
-          # 如果想强制构建失败当 artifact 上传有错，启用下面这一行（可选）
           artifactErrorsFailBuild: true
