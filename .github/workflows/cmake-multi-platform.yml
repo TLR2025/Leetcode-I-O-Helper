@@ -87,10 +87,13 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create or update Release and upload assets (robust)
+      - name: Create/Update Release and attach artifacts
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          files: artifacts/**/*
-          overwrite: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: artifacts/**/*
+          allowUpdates: true
+          # 如果想强制构建失败当 artifact 上传有错，启用下面这一行（可选）
+          artifactErrorsFailBuild: true
