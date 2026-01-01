@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build on ${{ matrix.os }} (${{ matrix.compiler }})
@@ -19,21 +22,21 @@ jobs:
             c_compiler: gcc
             cpp_compiler: g++
             artifact_name: lioh-linux-gcc
-            exe_path: build/lioh
+            exe_path: build/bin/lioh
 
           - os: ubuntu-latest
             compiler: clang
             c_compiler: clang
             cpp_compiler: clang++
             artifact_name: lioh-linux-clang
-            exe_path: build/lioh
+            exe_path: build/bin/lioh
 
           - os: windows-latest
             compiler: msvc
             c_compiler: cl
             cpp_compiler: cl
             artifact_name: lioh-windows-msvc.exe
-            exe_path: build/Release/lioh.exe
+            exe_path: build/bin/Release/lioh.exe
 
     steps:
       - name: Checkout
@@ -49,9 +52,9 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      # - name: Test
-      #   working-directory: build
-      #   run: ctest --build-config Release
+      - name: Test
+        working-directory: build
+        run: ctest --build-config Release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
