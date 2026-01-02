@@ -14,3 +14,8 @@ OPTIONS:
   -v,     --version           Display program version information and exit
 ```
 **The generated code will include input and output logic. You can directly copy Leetcode's JSON-like data and paste it into your terminal.**
+## Installation script
+### Linux
+```
+curl -fsSL https://raw.githubusercontent.com/TLR2025/Leetcode-I-O-Helper/main/scripts/linux.sh | bash
+```
