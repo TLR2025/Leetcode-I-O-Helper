@@ -419,6 +419,8 @@ std::string generateMainFunction(Function &func) {
     std::unordered_set<std::string> _2d;
     // Is the split_ function needed?
     bool needSplit = false;
+    // Is the input_treenode_ function needed?
+    bool treenode = false; 
     for (std::size_t i = 0; i < func.params.size(); i++) {
         std::string tp = func.params[i].type;
         // Delete &
@@ -474,6 +476,11 @@ std::string generateMainFunction(Function &func) {
                      tp.substr(tp.rfind('<') + 1, tp.find('>') - tp.rfind('<') - 1)
                 ),
             nm);
+        } else if (tp == "TreeNode*") {
+            treenode = true;
+            src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tgetline(std::cin, {}_str);\n", nm);
+            src += std::format("\t{} = input_treenode_({}_str);\n", nm, nm);
         } else {
             throw std::runtime_error("Unsupported type: \"" + tp + "\".");
         }
@@ -483,6 +490,14 @@ std::string generateMainFunction(Function &func) {
     }
     for(auto &tp:_2d) {
         src.insert(lambdaInsertLoc, generate2DInput(tp));
+    }
+    if(treenode) {
+        needSplit = true;
+        src.insert(lambdaInsertLoc,
+            std::string("\t") 
+            + R"(auto input_treenode_=[&](const string&str)->TreeNode* {vector<TreeNode*>treenode_arr;auto st=str.find('[');auto ed=str.rfind(']');if(st==string::npos||ed==string::npos)return nullptr;vector<string>res_str=split_(str.substr(st+1,ed-st-1),',',false);if(res_str.size()==0)return nullptr;for(auto&it:res_str){if(it.find("null")!=string::npos){treenode_arr.push_back(nullptr);}else{TreeNode*nodep=new TreeNode(stoi(it));treenode_arr.push_back(nodep);}}queue<size_t>que;size_t ind=0;que.push(0);while(!que.empty()){size_t fr=que.front();que.pop();if(treenode_arr[fr]==nullptr)continue;++ind;if(ind>=treenode_arr.size())break;treenode_arr[fr]->left=treenode_arr[ind];que.push(ind);++ind;if(ind>=treenode_arr.size())break;treenode_arr[fr]->right=treenode_arr[ind];que.push(ind);}return treenode_arr[0];};)"
+            + "\n"
+        );
     }
     if(needSplit) {
         // Insert lambda function split_
@@ -626,7 +641,7 @@ void processSourceCpp(const std::string &source, const std::string &o_path) {
     }
 
     // Insert the necessary headers.
-    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream", "stdexcept"});
+    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream", "stdexcept", "queue"});
 
     // Insert the generated main function at the end of the source.
     newSource.append(newMainFunc);
