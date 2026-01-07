@@ -14,7 +14,9 @@ set "version=%version:,=%"
 echo Latest version: %version%
 
 set "tmpfile=%TEMP%\lioh.exe"
-set "target=%USERPROFILE%\lioh.exe"
+set "target=%USERPROFILE%\.lioh\lioh.exe"
+for %%i in ("%target%") do set "target_dir=%%~dpi"
+
 set "download_url=https://github.com/TLR2025/Leetcode-I-O-Helper/releases/download/%version%/lioh-windows-msvc-%version%.exe"
 
 echo Downloading %download_url% ...
@@ -25,6 +27,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+mkdir "%target_dir%"
 move /y "%tmpfile%" "%target%" >nul
 if errorlevel 1 (
   echo ERROR: Unable to move file to %target%. Please check if you have write permissions.
@@ -32,6 +35,9 @@ if errorlevel 1 (
 )
 
 echo Downloaded to %target%.
+
+set PATH=%target_folder%;%PATH%
+powershell -NoProfile -Command "$tf=[Environment]::ExpandEnvironmentVariables('%target_dir%');if(-not (Test-Path $tf)){New-Item -ItemType Directory -Path $tf|Out-Null};$u=[Environment]::GetEnvironmentVariable('Path','User');if(-not $u){[Environment]::SetEnvironmentVariable('Path',$tf,'User');Write-Host 'User PATH set to:' $tf} elseif($u.Split(';') -notcontains $tf){[Environment]::SetEnvironmentVariable('Path',$u + ';' + $tf,'User');Write-Host 'Appended to User PATH:' $tf} else {Write-Host 'Already in User PATH:' $tf}"
 
 pause
 
