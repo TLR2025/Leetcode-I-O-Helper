@@ -14,7 +14,7 @@
 namespace fs = std::filesystem;
 
 std::unordered_set<std::string> langs = {"cpp"};
-std::string APP_VERSION = "v1.0.9";
+std::string APP_VERSION = "v1.0.11";
 
 int main(int argc, char* argv[]) {
     CLI::App app{"A tool that can automatically generate the Input/Output logic based on a LeetCode's Solution class.", "LeetCode I/O helper"};

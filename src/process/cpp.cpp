@@ -399,6 +399,8 @@ std::string generateOutputCode(const std::string& type) {
         if(type == "vector<vector<char>>")
             return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'[';for(size_t i=0;i<result_.size();i++){if(i!=0)cout<<", ";cout<<'"';char ch_[2]={result_[i],'\0'};cout<<(result_[i]=='"'?"\\\"" : (result_[i] == '\\' ? "\\\\" : (result_[i] == '\b' ? "\\b" : (result_[i] == '\f' ? "\\f" : (result_[i] == '\n' ? "\\n" : (result_[i] == '\r' ? "\\r" : (result_[i] == '\t' ? "\\t" : ch_)))))));cout<<'"';}cout<<']'<<endl;})" + "\n";
         return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(10)<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(10)<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
+    } else if(type == "ListNode*") {
+        return std::string("\t") + R"(if(result_==nullptr)cout<<"[]"<<endl;else{cout<<"["<<result_->val;result_=result_->next;while(result_!=nullptr){cout<<", "<<result_->val;result_=result_->next;}cout<<"]";})" + "\n";
     }
     throw std::runtime_error("An error has occurred while generating the output code.");
 }
@@ -420,7 +422,9 @@ std::string generateMainFunction(Function &func) {
     // Is the split_ function needed?
     bool needSplit = false;
     // Is the input_treenode_ function needed?
-    bool treenode = false; 
+    bool treenode = false;
+    // Is the input_listnode_ function needed?
+    bool listnode = false; 
     for (std::size_t i = 0; i < func.params.size(); i++) {
         std::string tp = func.params[i].type;
         // Delete &
@@ -481,9 +485,23 @@ std::string generateMainFunction(Function &func) {
             src += std::format("\tstring {}_str;\n", nm);
             src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = input_treenode_({}_str);\n", nm, nm);
+        } else if (tp == "ListNode*") {
+            listnode = true;
+            src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tgetline(std::cin, {}_str);\n", nm);
+            src += std::format("\t{} = input_listnode_({}_str);\n", nm, nm);
         } else {
             throw std::runtime_error("Unsupported type: \"" + tp + "\".");
         }
+    }
+    if(listnode) {
+        src.insert(lambdaInsertLoc, 
+            std::string("\t")
+            + R"(auto input_listnode_=[&](const string&str)->ListNode* {ListNode*root=new ListNode();ListNode*now=root;vector<int>arr=input_1d_int_(str);if(arr.size()==0)return nullptr;for(size_t i=0;i<arr.size()-1;i++)now->val=arr[i],now->next=new ListNode(),now=now->next;now->val=arr[arr.size()-1];return root;};)"
+            + "\n"
+        );
+        _1d.insert("vector<int>");
+        needSplit=true;
     }
     for(auto &tp:_1d) {
         src.insert(lambdaInsertLoc, generate1DInput(tp));
