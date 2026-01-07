@@ -8,6 +8,10 @@ Supported Language(s): ```cpp```
 ```
 curl -fsSL https://raw.githubusercontent.com/TLR2025/Leetcode-I-O-Helper/main/scripts/linux.sh | bash
 ```
+### Windows
+```
+curl -sSL "https://raw.githubusercontent.com/TLR2025/Leetcode-I-O-Helper/main/scripts/windows.bat" -o "%TEMP%\windows.bat" && cmd /c "%TEMP%\windows.bat"
+```
 ## Usage
 ```
 lioh [OPTIONS]
