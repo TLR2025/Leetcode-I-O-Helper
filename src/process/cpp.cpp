@@ -401,6 +401,8 @@ std::string generateOutputCode(const std::string& type) {
         return std::string("\t") + R"(if(result_.size()==0)cout<<"[]"<<endl;else{cout<<'['<<endl;for(size_t i=0;i<result_.size();i++){const auto&row_=result_[i];if(row_.size()==0)cout<<"[]"<<endl;else{cout<<"\t[";cout<<setw(10)<<row_[0];for(size_t j=1;j<row_.size();j++){cout<<", ";cout<<setw(10)<<row_[j];}cout<<']';}if(i!=result_.size()-1)cout<<',';cout<<endl;}cout<<']'<<endl;})" + "\n";
     } else if(type == "ListNode*") {
         return std::string("\t") + R"(if(result_==nullptr)cout<<"[]"<<endl;else{cout<<"["<<result_->val;result_=result_->next;while(result_!=nullptr){cout<<", "<<result_->val;result_=result_->next;}cout<<"]";})" + "\n";
+    } else if(type == "TreeNode*") {
+        return std::string("\t") + R"(vector<TreeNode*>layer={result_},result_arr_;while(!layer.empty()){result_arr_.reserve(result_arr_.size()+layer.size());result_arr_.insert(result_arr_.end(),layer.begin(),layer.end());vector<TreeNode*>new_layer;for(TreeNode*node:layer){if(node!=nullptr){new_layer.push_back(node->left);new_layer.push_back(node->right);}}layer=move(new_layer);}while(result_arr_.size()>0&&result_arr_[result_arr_.size()-1]==nullptr)result_arr_.pop_back();cout<<"[";for(size_t i=0;i<result_arr_.size();i++){if(i!=0)cout<<", ";TreeNode*node=result_arr_[i];if(node==nullptr)cout<<"null";else cout<<node->val;}cout<<"]"<<endl;)" + "\n";
     }
     throw std::runtime_error("An error has occurred while generating the output code.");
 }
@@ -659,7 +661,7 @@ void processSourceCpp(const std::string &source, const std::string &o_path) {
     }
 
     // Insert the necessary headers.
-    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream", "stdexcept", "queue"});
+    insertHeadersIfNotIncluded(newSource, {"string", "vector", "iostream", "stdexcept", "queue", "utility"});
 
     // Insert the generated main function at the end of the source.
     newSource.append(newMainFunc);
