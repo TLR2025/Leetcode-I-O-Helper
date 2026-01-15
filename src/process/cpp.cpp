@@ -441,6 +441,7 @@ std::string generateMainFunction(Function &func) {
             if(tp == "bool") {
                 src += std::format("\tcin >> boolalpha >> {};\n", nm);
             } else if (tp == "string") {
+                src += std::format("\tcin.ingnore();\n");
                 src += std::format("\tgetline(cin, {});\n\t", nm);
                 src += std::format(
                     R"({}={}.substr({}.find('\"')+1,{}.rfind('\"')-{}.find('\"')-1);for(size_t i=0;i<{}.size();i++){{if({}[i]!='\\')continue;switch({}[i+1]){{case '"':{}.replace(i,2,"\"");;break;case '\\':{}.replace(i,2,"\\");;break;case '/':{}.replace(i,2,"/");;break;case 'b':{}.replace(i,2,"\b");;break;case 'f':{}.replace(i,2,"\f");;break;case 'n':{}.replace(i,2,"\n");;break;case 'r':{}.replace(i,2,"\r");;break;case 't':{}.replace(i,2,"\t");;break;default:throw std::runtime_error("Invalid escape");}}}})",
@@ -448,6 +449,7 @@ std::string generateMainFunction(Function &func) {
                 );
             } else if (tp == "char") {
                 src += std::format("\tstring {}_str;\n", nm);
+                src += std::format("\tcin.ingnore();\n");
                 src += std::format("\tgetline(cin, {}_str);\n", nm);
                 src += std::format(
                     "\t{}_str = {}_str.substr({}_str.find('\"') + 1, {}_str.rfind('\"') - {}_str.find('\"') - 1);\n",
@@ -465,6 +467,7 @@ std::string generateMainFunction(Function &func) {
             if (tp != "vector<char>" && tp != "vector<string>") 
                 needSplit = true;
             src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tcin.ingnore();\n");
             src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
                  std::format("input_1d_{}_",
@@ -476,6 +479,7 @@ std::string generateMainFunction(Function &func) {
             if (tp != "vector<vector<char>>" && tp != "vector<vector<string>>") 
                 needSplit = true;
             src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tcin.ingnore();\n");
             src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = {}({}_str);\n", nm,
                  std::format("input_2d_{}_",
@@ -485,11 +489,13 @@ std::string generateMainFunction(Function &func) {
         } else if (tp == "TreeNode*") {
             treenode = true;
             src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tcin.ingnore();\n");
             src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = input_treenode_({}_str);\n", nm, nm);
         } else if (tp == "ListNode*") {
             listnode = true;
             src += std::format("\tstring {}_str;\n", nm);
+            src += std::format("\tcin.ingnore();\n");
             src += std::format("\tgetline(std::cin, {}_str);\n", nm);
             src += std::format("\t{} = input_listnode_({}_str);\n", nm, nm);
         } else {
